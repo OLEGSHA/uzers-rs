@@ -46,3 +46,32 @@ pub trait Groups {
     /// Returns the effective group name.
     fn get_effective_groupname(&self) -> Option<Arc<OsStr>>;
 }
+
+/// Trait for containers of users.
+pub trait AllUsers {
+    /// [`User`] iterator returned by [`get_all_users`][Self::get_all_users].
+    type UserIter<'a>: Iterator<Item = &'a User>
+    where
+        Self: 'a;
+
+    /// Creates a new iterator over every user present on the system.
+    fn get_all_users(&self) -> Self::UserIter<'_>;
+
+    /// Returns a `User` if one exists for the given user ID; otherwise, returns `None`.
+    fn get_user_by_uid(&self, uid: uid_t) -> Option<&User>;
+
+    /// Returns a `User` if one exists for the given username; otherwise, returns `None`.
+    fn get_user_by_name<S: AsRef<OsStr> + ?Sized>(&self, username: &S) -> Option<&User>;
+
+    /// Returns the user ID for the user running the process.
+    fn get_current_uid(&self) -> uid_t;
+
+    /// Returns the username of the user running the process.
+    fn get_current_username(&self) -> Option<&OsStr>;
+
+    /// Returns the effective user id.
+    fn get_effective_uid(&self) -> uid_t;
+
+    /// Returns the effective username.
+    fn get_effective_username(&self) -> Option<&OsStr>;
+}
