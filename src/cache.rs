@@ -436,40 +436,61 @@ impl AllUsers for UsersSnapshot {
         for<'b> fn(&'b Option<User>) -> Option<&'b User>,
     >;
 
-    /// Creates a new iterator over every user present on the system.
-    fn get_all_users(&self) -> Self::UserIter<'_> {
+    fn all_users(&self) -> Self::UserIter<'_> {
         self.users.forward.values().filter_map(Option::as_ref)
     }
 
-    /// Returns a `User` if one exists for the given user ID; otherwise, returns `None`.
-    fn get_user_by_uid(&self, uid: uid_t) -> Option<&User> {
+    fn user_by_uid(&self, uid: uid_t) -> Option<&User> {
         self.users.forward.get(&uid)?.as_ref()
     }
 
-    /// Returns a `User` if one exists for the given username; otherwise, returns `None`.
-    fn get_user_by_name<S: AsRef<OsStr> + ?Sized>(&self, username: &S) -> Option<&User> {
+    fn user_by_name<S: AsRef<OsStr> + ?Sized>(&self, username: &S) -> Option<&User> {
         let name_arc = Arc::from(username.as_ref());
         let uid = self.users.backward.get(&name_arc)?.as_ref()?;
-        self.get_user_by_uid(*uid)
+        self.user_by_uid(*uid)
     }
 
-    /// Returns the user ID for the user running the process.
-    fn get_current_uid(&self) -> uid_t {
+    fn current_uid(&self) -> uid_t {
         self.uid
     }
 
-    /// Returns the username of the user running the process.
-    fn get_current_username(&self) -> Option<&OsStr> {
-        self.get_user_by_uid(self.uid).map(User::name)
+    fn current_username(&self) -> Option<&OsStr> {
+        self.user_by_uid(self.uid).map(User::name)
     }
 
-    /// Returns the effective user id.
-    fn get_effective_uid(&self) -> uid_t {
+    fn effective_uid(&self) -> uid_t {
         self.euid
     }
 
-    /// Returns the effective username.
-    fn get_effective_username(&self) -> Option<&OsStr> {
-        self.get_user_by_uid(self.euid).map(User::name)
+    fn effective_username(&self) -> Option<&OsStr> {
+        self.user_by_uid(self.euid).map(User::name)
+    }
+}
+
+impl Users for UsersSnapshot {
+    fn get_user_by_uid(&self, uid: uid_t) -> Option<Arc<User>> {
+        self.user_by_uid(uid).cloned().map(Arc::from)
+    }
+
+    fn get_user_by_name<S: AsRef<OsStr> + ?Sized>(&self, username: &S) -> Option<Arc<User>> {
+        self.user_by_name(username).cloned().map(Arc::from)
+    }
+
+    fn get_current_uid(&self) -> uid_t {
+        self.current_uid()
+    }
+
+    fn get_current_username(&self) -> Option<Arc<OsStr>> {
+        let uid = self.get_current_uid();
+        self.user_by_uid(uid).map(|u| Arc::clone(&u.name_arc))
+    }
+
+    fn get_effective_uid(&self) -> uid_t {
+        self.effective_uid()
+    }
+
+    fn get_effective_username(&self) -> Option<Arc<OsStr>> {
+        let uid = self.get_effective_uid();
+        self.user_by_uid(uid).map(|u| Arc::clone(&u.name_arc))
     }
 }
